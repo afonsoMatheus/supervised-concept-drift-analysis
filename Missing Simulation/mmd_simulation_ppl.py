@@ -10,11 +10,11 @@ from mdatagen.univariate.uMNAR import uMNAR
 
 MR_F = 30
 # MR_N = 3
-SCENARIOS = ['S4']
+SCENARIOS = ['S1']
 NUM_DATASETS= 1
 
-SPLITS_RATIO_S1 = [0.5, 0.5]
-MECHS_S1 = ["MCAR", "MAR"]
+SPLITS_RATIO_S1 = [0.34, 0.33, 0.33]
+MECHS_S1 = ["MAR", "MCAR", "MNAR"]
 
 SPLITS_RATIO_S2 = [0.25, 0.25, 0.25, 0.25]
 MECHS_S2 = ["MAR", "MNAR", "MAR", "MNAR"]
@@ -22,8 +22,8 @@ MECHS_S2 = ["MAR", "MNAR", "MAR", "MNAR"]
 SPLITS_RATIO_S3 = [0.2, 0.2, 0.2, 0.2, 0.2]
 MECHS_S3 = ["MNAR", "MAR", "MNAR", "MAR", "MNAR"]
 
-SPLITS_RATIO_S4 = [0.5, 0.1, 0.1, 0.1, 0.1, 0.1]
-MECHS_S4 = ["MAR", "MNAR", "MNAR", "MNAR", "MNAR", "MNAR"]
+# SPLITS_RATIO_S4 = [0.5, 0.1, 0.1, 0.1, 0.1, 0.1]
+# MECHS_S4 = ["MAR", "MNAR", "MNAR", "MNAR", "MNAR", "MNAR"]
 
 SEED = 1
 
@@ -169,26 +169,6 @@ def process_file(file_name, scenario, folder_path_o,
 
                 for mech, X_split in mms.items():
                     mmd[mech] = simulate_mm(mech, X_split.copy(), split_mr)
-
-            case "S4":
-                split_sizes = [int(len(X) * ratio) for ratio in SPLITS_RATIO_S4]
-                indexes = np.cumsum([0] + split_sizes)
-                idx_list = indexes
-                
-                mms = {
-                    f"{mech}_{i}": X.iloc[indexes[i]:indexes[i+1]] for i, mech in enumerate(MECHS_S4)
-                }
-                
-                split_mr = 25
-                split_mnar = 1
-
-                mnar_t = 0.5
-                for mech, X_split in mms.items():
-                    if mech.split("_")[0] == "MNAR":
-                        mmd[mech] = simulate_mm(mech, X_split.copy(), split_mnar, mnar_t)
-                        mnar_t += 0.1
-                    else:
-                        mmd[mech] = simulate_mm(mech, X_split.copy(), split_mr)
                 
             case _:
                 continue

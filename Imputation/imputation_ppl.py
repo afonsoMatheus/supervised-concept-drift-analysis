@@ -12,10 +12,12 @@ from eval_bml_imp import eval_oml_imp_horizon
 from spotriver.evaluation.eval_bml import plot_bml_oml_horizon_metrics
 import psutil
 
-ALIAS = "KS"
-MEC_BATCHES = [["S1"], ["S2"], ["S3"]]
+
+ALIAS = "FINAL"
+# MEC_BATCHES = [["S1"],["S2"],["S3"]]
+MEC_BATCHES = [["S1","S2"],["S3"]]
 MRS = ["30"]
-P_NUM = 1
+P_NUM = 30
 M_NUM = 120000000
 N = 1
 
@@ -23,7 +25,7 @@ SPLIT = 0
 HORIZON = 1
 GRACE_PERIOD = 0
 OBSERVED_PATIENTS = ['A36HR6Y']
-EXCLUDED_PATIENTS = ['AJ7TSV9','AS2MVDL']
+EXCLUDED_PATIENTS = ['AJ7TSV9','AS2MVDL'] #AUY8KYW muito grande
 FEATURES = ['hour', 'minute'] 
 
 SEED = 1
@@ -49,82 +51,178 @@ class MeanRegressor:
     def predict_one(self,x):
         return self.mean.get()
     
-param_grid = {
-    # "mean": {},
-    # "tree-no-cd": {},
-    # "tree-ad-base": {},
-    # "tree-ad-ph": {
-    #     # 'dw': [10000, 20000, 30000],
-    #     'd': [0.005, 0.1, 0.2],
-    #     't': [90, 95],
-    # },
-    "tree-ad-ks": {
-        'a': [0.001, 0.005],
-        'w': [30000, 50000],
-        's': [5000, 10000]
-    },
-    # "tree-ad-adwin": {
-    #     'a': [0.005, 0.1, 0.001],
-    #     'w': [10000, 20000, 30000],
-    #     's': [10000, 20000, 30000]
-    # }
+# param_grid_sce = {
+#     scenario: {
+#         "Mean": {},
+#         'HT': {},
+#         "HAT-KSWIN": {},
+#         'HAT-ADWIN': {},
+#         'HAT-PH': {}
+#     }
+#     for batch in MEC_BATCHES
+#     for scenario in batch
+# }
 
+MODELS_SCE = {
+    'S1': {
+        "Mean": MeanRegressor(),
+        'HT': preprocessing.StandardScaler() |
+            tree.HoeffdingTreeRegressor(),
+        "HAT-KSWIN": preprocessing.StandardScaler() |
+            tree.HoeffdingAdaptiveTreeRegressor(
+                drift_detector=drift.KSWIN(
+                    alpha=0.0001,
+                    window_size=30000,
+                    stat_size=1000,
+                ),
+                seed=SEED,
+            ),
+        'HAT-ADWIN': preprocessing.StandardScaler() |
+            tree.HoeffdingAdaptiveTreeRegressor(
+                drift_detector=drift.ADWIN(
+                    delta=0.002,
+                    clock=100,
+                    min_window_length=30000
+                ),
+                seed=SEED,
+            ),
+        'HAT-PH': preprocessing.StandardScaler() |
+            tree.HoeffdingAdaptiveTreeRegressor(
+                drift_detector=drift.PageHinkley(
+                    delta=0.5,
+                    threshold=900,
+                    min_instances=11000
+                ),
+                seed=SEED,
+            )
+    },
+    'S2': {
+        "Mean": MeanRegressor(),
+        'HT': preprocessing.StandardScaler() |
+            tree.HoeffdingTreeRegressor(),
+        "HAT-KSWIN": preprocessing.StandardScaler() |
+            tree.HoeffdingAdaptiveTreeRegressor(
+                drift_detector=drift.KSWIN(
+                    alpha=0.0001,
+                    window_size=20000,
+                    stat_size=800,
+                ),
+                seed=SEED,
+            ),
+        'HAT-ADWIN': preprocessing.StandardScaler() |
+            tree.HoeffdingAdaptiveTreeRegressor(
+                drift_detector=drift.ADWIN(
+                    delta=0.002,
+                    clock=300,
+                    min_window_length=30000
+                ),
+                seed=SEED,
+            ),
+        'HAT-PH': preprocessing.StandardScaler() |
+            tree.HoeffdingAdaptiveTreeRegressor(
+                drift_detector=drift.PageHinkley(
+                    delta=0.9,
+                    threshold=900,
+                    min_instances=11000
+                ),
+                seed=SEED,
+            )
+    },
+    'S3': {
+        "Mean": MeanRegressor(),
+        'HT': preprocessing.StandardScaler() |
+            tree.HoeffdingTreeRegressor(),
+        "HAT-KSWIN": preprocessing.StandardScaler() |
+            tree.HoeffdingAdaptiveTreeRegressor(
+                drift_detector=drift.KSWIN(
+                    alpha=0.0001,
+                    window_size=30000,
+                    stat_size=200,
+                ),
+                seed=SEED,
+            ),
+        'HAT-ADWIN': preprocessing.StandardScaler() |
+            tree.HoeffdingAdaptiveTreeRegressor(
+                drift_detector=drift.ADWIN(
+                    delta=0.002,
+                    clock=32,
+                    min_window_length=30000
+                ),
+                seed=SEED,
+            ),
+        'HAT-PH': preprocessing.StandardScaler() |
+            tree.HoeffdingAdaptiveTreeRegressor(
+                drift_detector=drift.PageHinkley(
+                    delta=0.8,
+                    threshold=1000,
+                    min_instances=11000
+                ),
+                seed=SEED,
+            )
+    }
+}
+    
+param_grid = {
+    "Mean": {},
+    'HT': {},
+    "HAT-KSWIN": {
+        # 'dw': [10000, 20000, 30000],
+        #'a': [0.0001],
+        # 'w': [20000, 30000],
+        # 's': [600, 2000, 1500, 3000]
+    },
+    'HAT-ADWIN': {
+     #    'd': [0.002],
+      #   'c': [32, 100, 300, 500, 600],
+     #    'mw': [10000, 30000]
+    },
+    'HAT-PH': {
+    #     'd': [0.9, 1],
+    #     't': [900, 1000, 1100],
+    #     'mi':[12000, 13000]
+    }
+    
 }
     
 MODEL_FACTORY = {
-    "mean": {
+    "Mean": {
         "builder": lambda params: MeanRegressor()
     },
-    "tree-no-cd": {
+    'HT': {
         "builder": lambda params: (
             preprocessing.StandardScaler() |
-            tree.HoeffdingAdaptiveTreeRegressor(
-                grace_period=params.get("gp", 5000),
-                max_depth=params.get("md", None),
-                drift_window_threshold=params.get("dw", 30000),
-                drift_detector=drift.NoDrift(),
-                seed=SEED,
+            tree.HoeffdingTreeRegressor(
+                # grace_period=params.get("gp", 5000),
+                # max_depth=params.get("md", None),
             )
         )
     },
-    "tree-ad-base": {
+    "HAT-PH": {
         "builder": lambda params: (
             preprocessing.StandardScaler() |
             tree.HoeffdingAdaptiveTreeRegressor(
-                grace_period=params.get("gp", 5000),
-                max_depth=params.get("md", None),
-                drift_window_threshold=params.get("dw", 30000),
-
-                seed=SEED,
-            )
-        )
-    },
-    "tree-ad-ph": {
-        "builder": lambda params: (
-            preprocessing.StandardScaler() |
-            tree.HoeffdingAdaptiveTreeRegressor(
-                grace_period=params.get("gp", 5000),
-                max_depth=params.get("md", None),
-                drift_window_threshold=params.get("dw", 30000),
-                # drift_detector=params.get("dd", drift.ADWIN()),
+                # grace_period=params.get("gp", 5000),
+                # max_depth=params.get("md", None),
+                # drift_window_threshold=params.get("dw", 30000),
                 drift_detector=drift.PageHinkley(
                     delta=params.get("d", 0.005),
-                    threshold=params.get("t", 50.0)),
+                    threshold=params.get("t", 50.0),
+                    min_instances=params.get("mi", 30)
+                ),
                 seed=SEED,
             )
         )
     },
 
-    "tree-ad-ks": {
+    "HAT-KS": {
         "builder": lambda params: (
             preprocessing.StandardScaler() |
             tree.HoeffdingAdaptiveTreeRegressor(
-                grace_period=params.get("gp", 5000),
-                max_depth=params.get("md", None),
-                drift_window_threshold=params.get("dw", 30000),
-                # drift_detector=params.get("dd", drift.ADWIN()),
+                # grace_period=params.get("gp", 5000),
+                # max_depth=params.get("md", None),
+                # drift_window_threshold=params.get("dw", 30000),
                 drift_detector=drift.KSWIN(
-                    alpha=params.get("a", 0.005),
+                    alpha=params.get("a", 0.001),
                     window_size=params.get("w", 10000),
                     stat_size=params.get("s", 10000),
                 ),
@@ -133,22 +231,22 @@ MODEL_FACTORY = {
         )
     },
 
-    "tree-ad-adwin": {
+    "HAT-ADWIN": {
         "builder": lambda params: (
             preprocessing.StandardScaler() |
             tree.HoeffdingAdaptiveTreeRegressor(
-                grace_period=params.get("gp", 5000),
-                max_depth=params.get("md", None),
-                drift_window_threshold=params.get("dw", 30000),
-                # drift_detector=params.get("dd", drift.ADWIN()),
+                # drift_window_threshold=params.get("dw", 30000),
                 drift_detector=drift.ADWIN(
-                    delta=params.get("a", 0.005)
+                    delta=params.get("a", 0.005),
+                    min_window_length=params.get("mw", 1000),
+                    clock= params.get("c", 32)
                 ),
                 seed=SEED,
             )
         )
     }
 }
+
 
 def build_models(param_grid, factory):
     MODELS = {}
@@ -177,9 +275,11 @@ def build_models(param_grid, factory):
 
     return MODELS
 
-MODELS = build_models(param_grid, MODEL_FACTORY)
+# MODELS = build_models(param_grid, MODEL_FACTORY)
 
 def process_single_mr(mech, mr, i, pat, folder_path_m, folder_path_imputed):
+    MODELS = MODELS_SCE[mech]
+
     local_result = {mr: {f"{imp}": 0 for imp in MODELS.keys()}}
     local_result[mr].update({f"t_{imp}": 0 for imp in MODELS.keys()})
     local_result[mr].update({f"it_{imp}": 0 for imp in MODELS.keys()})
@@ -246,11 +346,11 @@ def process_single_mr(mech, mr, i, pat, folder_path_m, folder_path_imputed):
                 df_imputed.loc[df_true_oml["Prediction"].index, 'heartrate'] = df_true_oml["Prediction"].values
 
                 df_imputed.to_csv(
-                    os.path.join(
-                        path_imp,
-                        f"{pat.rstrip('/').split('/')[-1]}_hr_{mech}_{i}_{mr}_{imp_name}.csv"
-                    ),
-                    index=False
+                     os.path.join(
+                         path_imp,
+                         f"{pat.rstrip('/').split('/')[-1]}_hr_{mech}_{i}_{mr}_{imp_name}.csv"
+                     ),
+                     index=False
                 )
 
     except Exception as e:
@@ -275,6 +375,7 @@ def process_mechanism(mech, num_datasets, mrs):
         if os.path.isdir(os.path.join(folder_path_m_base, name))
     ]
     patients = [p for p in patients if p.rstrip('/').split('/')[-1] not in EXCLUDED_PATIENTS]
+    
     patients = patients[:P_NUM]  
     # patients = [p for p in patients if p.rstrip('/').split('/')[-1] in OBSERVED_PATIENTS]
 
@@ -308,7 +409,7 @@ def process_mechanism(mech, num_datasets, mrs):
                         if patient_id == 'A0NVTRV':
                             if result[1]:
                                 df_labels = list(result[1].keys())
-                                df_labels = [new_labels.get(imp, imp) for imp in df_labels if imp in MODELS.keys()]
+                                df_labels = [new_labels.get(imp, imp) for imp in df_labels if imp in MODELS_SCE[mech].keys()]
                                 evals_list = [evals for evals in result[1].values()]
                                 for ev in evals_list:
                                     ev.dropna(inplace=True)
@@ -330,22 +431,20 @@ def process_mechanism(mech, num_datasets, mrs):
                                     local_results[mech][mr_key][k] = local_results[mech][mr_key].get(k, 0) + v
 
 
-                        process = psutil.Process(os.getpid())
-                        memoria = process.memory_info().rss  # em bytes
-                        print(f"Uso de memória {patient_id}: {memoria / 1024**2:.2f} MB")
+                        # process = psutil.Process(os.getpid())
+                        # memoria = process.memory_info().rss  # em bytes
+                        # print(f"Uso de memória {patient_id}: {memoria / 1024**2:.2f} MB")
                     
                     except Exception as e:
                         print(f"❌ Falha no MR {mr}: {e}")
 
     for mr in local_results[mech]:
-        for imp in MODELS.keys():
+        for imp in MODELS_SCE[mech].keys():
             local_results[mech][mr][imp] /= len(patients) * num_datasets
             local_results[mech][mr][f"med_{imp}"] /= len(patients) * num_datasets
             local_results[mech][mr][f"t_{imp}"] /= len(patients) * num_datasets
             local_results[mech][mr][f"it_{imp}"] /= len(patients) * num_datasets
             local_results[mech][mr][f"m_{imp}"] /= len(patients) * num_datasets
-
-    
 
     return {
         "c": local_results,
@@ -358,7 +457,7 @@ if __name__ == "__main__":
     combined_pat_results = {}
 
     print(f"🚀 Iniciando processamento para mecanismos: {MEC_BATCHES} | Missing Rates: {MRS} | Datasets por paciente: {N} | Pacientes: {P_NUM}")
-    print(f"Modelos a serem avaliados {len(MODELS)}: {list(MODELS.keys())}")
+    print(f"Modelos a serem avaliados {len(MODELS_SCE)}: {list(MODELS_SCE['S1'].keys())}")
 
     total_time_start = time.time()
 
@@ -394,7 +493,7 @@ if __name__ == "__main__":
             records = []
             for mech in combined_results:
                 for mr in combined_results[mech]:
-                    for imp in MODELS.keys():
+                    for imp in MODELS_SCE[mech].keys():
                         records.append({
                             'mechanism': mech,
                             'missing_rate': mr,
@@ -406,8 +505,15 @@ if __name__ == "__main__":
                             'memory': round(combined_results[mech][mr][f'm_{imp}'], 2)
                         })
 
+            os.makedirs(f'Parameters/{ALIAS}', exist_ok=True)
+
             results_df = pd.DataFrame(records)
-            result_path = f'Analysis/Parameters/imputation_results_{ALIAS}.csv'
+            # result_path = f'Parameters/{ALIAS}/imputation_results_{ALIAS}_{P_NUM}.csv'
+            # file_exists = os.path.exists(result_path)
+            # results_df.to_csv(result_path, index=False, mode='a', header = not file_exists)
+            # print(f"✅ Resultados consolidados salvos em {result_path}")
+
+            result_path = f'Analysis/imputation_results_{ALIAS}.csv'
             if os.path.exists(result_path):
                 os.remove(result_path)
             results_df.to_csv(result_path, index=False)
@@ -417,7 +523,7 @@ if __name__ == "__main__":
             for mech in combined_pat_results:
                 for pat in combined_pat_results[mech]:
                     for mr in combined_pat_results[mech][pat]:
-                        for imp in MODELS.keys():
+                        for imp in MODELS_SCE[mech].keys():
                             if imp in combined_pat_results[mech][pat][mr]:
                                 pat_records.append({
                                     'mechanism': mech,
@@ -432,7 +538,14 @@ if __name__ == "__main__":
                                 })
 
             pat_df = pd.DataFrame(pat_records)
-            pat_path = f"Analysis/Parameters/imputation_results_by_patient_{ALIAS}.csv"
+
+            # result_path = f'Parameters/{ALIAS}/imputation_results_by_patient_{ALIAS}_{P_NUM}.csv'
+            # file_exists = os.path.exists(result_path)
+            # pat_df.to_csv(result_path, index=False, mode='a', header = not file_exists)
+            # print(f"✅ Resultados consolidados salvos em {result_path}")
+
+            pat_path = f"Analysis/imputation_results_by_patient_{ALIAS}.csv"
+            file_exists = os.path.exists(pat_path)
             if os.path.exists(pat_path):
                 os.remove(pat_path)
             pat_df.to_csv(pat_path, index=False)
