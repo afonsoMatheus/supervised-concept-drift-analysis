@@ -13,17 +13,17 @@ from spotriver.evaluation.eval_bml import plot_bml_oml_horizon_metrics
 import psutil
 
 
-ALIAS = "FINAL"
+ALIAS = "PH"
+MEC_BATCHES = [["S1","S2","S3"]]
 # MEC_BATCHES = [["S1"],["S2"],["S3"]]
-MEC_BATCHES = [["S1","S2"],["S3"]]
 MRS = ["30"]
-P_NUM = 30
+P_NUM = 1
 M_NUM = 120000000
 N = 1
 
-SPLIT = 0
+SPLIT = 10000
 HORIZON = 1
-GRACE_PERIOD = 0
+GRACE_PERIOD = SPLIT
 OBSERVED_PATIENTS = ['A36HR6Y']
 EXCLUDED_PATIENTS = ['AJ7TSV9','AS2MVDL'] #AUY8KYW muito grande
 FEATURES = ['hour', 'minute'] 
@@ -50,18 +50,6 @@ class MeanRegressor:
 
     def predict_one(self,x):
         return self.mean.get()
-    
-# param_grid_sce = {
-#     scenario: {
-#         "Mean": {},
-#         'HT': {},
-#         "HAT-KSWIN": {},
-#         'HAT-ADWIN': {},
-#         'HAT-PH': {}
-#     }
-#     for batch in MEC_BATCHES
-#     for scenario in batch
-# }
 
 MODELS_SCE = {
     'S1': {
@@ -165,21 +153,21 @@ MODELS_SCE = {
 param_grid = {
     "Mean": {},
     'HT': {},
-    "HAT-KSWIN": {
+    # "HAT-KSWIN": {
         # 'dw': [10000, 20000, 30000],
         #'a': [0.0001],
         # 'w': [20000, 30000],
         # 's': [600, 2000, 1500, 3000]
-    },
-    'HAT-ADWIN': {
+    # },
+    # 'HAT-ADWIN': {
      #    'd': [0.002],
       #   'c': [32, 100, 300, 500, 600],
      #    'mw': [10000, 30000]
-    },
+    # },
     'HAT-PH': {
-    #     'd': [0.9, 1],
-    #     't': [900, 1000, 1100],
-    #     'mi':[12000, 13000]
+         'd': [0.9],
+         't': [900],
+         'mi':[12000]
     }
     
 }
@@ -275,10 +263,10 @@ def build_models(param_grid, factory):
 
     return MODELS
 
-# MODELS = build_models(param_grid, MODEL_FACTORY)
+MODELS = build_models(param_grid, MODEL_FACTORY)
 
 def process_single_mr(mech, mr, i, pat, folder_path_m, folder_path_imputed):
-    MODELS = MODELS_SCE[mech]
+    # MODELS = MODELS_SCE[mech]
 
     local_result = {mr: {f"{imp}": 0 for imp in MODELS.keys()}}
     local_result[mr].update({f"t_{imp}": 0 for imp in MODELS.keys()})
@@ -345,16 +333,16 @@ def process_single_mr(mech, mr, i, pat, folder_path_m, folder_path_imputed):
 
                 df_imputed.loc[df_true_oml["Prediction"].index, 'heartrate'] = df_true_oml["Prediction"].values
 
-                df_imputed.to_csv(
-                     os.path.join(
-                         path_imp,
-                         f"{pat.rstrip('/').split('/')[-1]}_hr_{mech}_{i}_{mr}_{imp_name}.csv"
-                     ),
-                     index=False
-                )
+                # df_imputed.to_csv(
+                #      os.path.join(
+                #          path_imp,
+                #          f"{pat.rstrip('/').split('/')[-1]}_hr_{mech}_{i}_{mr}_{imp_name}.csv"
+                #      ),
+                #      index=False
+                # )
 
     except Exception as e:
-        print(f"❌ Erro ao processar {pat.rstrip('/').split('/')[-1]} | Mechanism: {mech} | MR: {mr} | Dataset: {i} | Error: {e}")
+        print(f"\n❌ Erro ao processar {pat.rstrip('/').split('/')[-1]} | Mechanism: {mech} | MR: {mr} | Dataset: {i} | Error: {e}")
 
     return local_result, pat_evals
 
@@ -409,7 +397,7 @@ def process_mechanism(mech, num_datasets, mrs):
                         if patient_id == 'A0NVTRV':
                             if result[1]:
                                 df_labels = list(result[1].keys())
-                                df_labels = [new_labels.get(imp, imp) for imp in df_labels if imp in MODELS_SCE[mech].keys()]
+                                df_labels = [new_labels.get(imp, imp) for imp in df_labels if imp in MODELS.keys()]
                                 evals_list = [evals for evals in result[1].values()]
                                 for ev in evals_list:
                                     ev.dropna(inplace=True)
@@ -429,17 +417,12 @@ def process_mechanism(mech, num_datasets, mrs):
                             else:
                                 for k, v in mr_dict.items():
                                     local_results[mech][mr_key][k] = local_results[mech][mr_key].get(k, 0) + v
-
-
-                        # process = psutil.Process(os.getpid())
-                        # memoria = process.memory_info().rss  # em bytes
-                        # print(f"Uso de memória {patient_id}: {memoria / 1024**2:.2f} MB")
                     
                     except Exception as e:
                         print(f"❌ Falha no MR {mr}: {e}")
 
     for mr in local_results[mech]:
-        for imp in MODELS_SCE[mech].keys():
+        for imp in MODELS.keys():
             local_results[mech][mr][imp] /= len(patients) * num_datasets
             local_results[mech][mr][f"med_{imp}"] /= len(patients) * num_datasets
             local_results[mech][mr][f"t_{imp}"] /= len(patients) * num_datasets
@@ -457,7 +440,10 @@ if __name__ == "__main__":
     combined_pat_results = {}
 
     print(f"🚀 Iniciando processamento para mecanismos: {MEC_BATCHES} | Missing Rates: {MRS} | Datasets por paciente: {N} | Pacientes: {P_NUM}")
-    print(f"Modelos a serem avaliados {len(MODELS_SCE)}: {list(MODELS_SCE['S1'].keys())}")
+    print(f"Modelos a serem avaliados:")
+    print(f"  {ALIAS}: {list(MODELS.keys())}")
+    # for mech in MODELS_SCE.keys():
+    #     print(f"  {mech}: {list(MODELS_SCE[mech].keys())}")
 
     total_time_start = time.time()
 
@@ -493,7 +479,7 @@ if __name__ == "__main__":
             records = []
             for mech in combined_results:
                 for mr in combined_results[mech]:
-                    for imp in MODELS_SCE[mech].keys():
+                    for imp in MODELS.keys():
                         records.append({
                             'mechanism': mech,
                             'missing_rate': mr,
@@ -508,22 +494,22 @@ if __name__ == "__main__":
             os.makedirs(f'Parameters/{ALIAS}', exist_ok=True)
 
             results_df = pd.DataFrame(records)
-            # result_path = f'Parameters/{ALIAS}/imputation_results_{ALIAS}_{P_NUM}.csv'
-            # file_exists = os.path.exists(result_path)
-            # results_df.to_csv(result_path, index=False, mode='a', header = not file_exists)
-            # print(f"✅ Resultados consolidados salvos em {result_path}")
-
-            result_path = f'Analysis/imputation_results_{ALIAS}.csv'
-            if os.path.exists(result_path):
-                os.remove(result_path)
-            results_df.to_csv(result_path, index=False)
+            result_path = f'Parameters/{ALIAS}/imputation_results_{ALIAS}_{P_NUM}_train.csv'
+            file_exists = os.path.exists(result_path)
+            results_df.to_csv(result_path, index=False, mode='a', header = not file_exists)
             print(f"✅ Resultados consolidados salvos em {result_path}")
+
+            # result_path = f'Analysis/imputation_results_{ALIAS}.csv'
+            # if os.path.exists(result_path):
+            #     os.remove(result_path)
+            # results_df.to_csv(result_path, index=False)
+            # print(f"✅ Resultados consolidados salvos em {result_path}")
 
             pat_records = []
             for mech in combined_pat_results:
                 for pat in combined_pat_results[mech]:
                     for mr in combined_pat_results[mech][pat]:
-                        for imp in MODELS_SCE[mech].keys():
+                        for imp in MODELS.keys():
                             if imp in combined_pat_results[mech][pat][mr]:
                                 pat_records.append({
                                     'mechanism': mech,
@@ -539,17 +525,17 @@ if __name__ == "__main__":
 
             pat_df = pd.DataFrame(pat_records)
 
-            # result_path = f'Parameters/{ALIAS}/imputation_results_by_patient_{ALIAS}_{P_NUM}.csv'
-            # file_exists = os.path.exists(result_path)
-            # pat_df.to_csv(result_path, index=False, mode='a', header = not file_exists)
-            # print(f"✅ Resultados consolidados salvos em {result_path}")
+            result_path = f'Parameters/{ALIAS}/imputation_results_by_patient_{ALIAS}_{P_NUM}_train.csv'
+            file_exists = os.path.exists(result_path)
+            pat_df.to_csv(result_path, index=False, mode='a', header = not file_exists)
+            print(f"✅ Resultados consolidados salvos em {result_path}")
 
-            pat_path = f"Analysis/imputation_results_by_patient_{ALIAS}.csv"
-            file_exists = os.path.exists(pat_path)
-            if os.path.exists(pat_path):
-                os.remove(pat_path)
-            pat_df.to_csv(pat_path, index=False)
-            print(f"✅ Resultados por paciente salvos em {pat_path}")
+            # pat_path = f"Analysis/imputation_results_by_patient_{ALIAS}.csv"
+            # file_exists = os.path.exists(pat_path)
+            # if os.path.exists(pat_path):
+            #     os.remove(pat_path)
+            # pat_df.to_csv(pat_path, index=False)
+            # print(f"✅ Resultados por paciente salvos em {pat_path}")
 
     total_time_elapsed = time.time() - total_time_start
     hours = total_time_elapsed / 3600
