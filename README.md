@@ -38,7 +38,7 @@ task applied to wearable datasets. The study is available on: *to appear*
 
 Clone the repository:
 
-git clone https://github.com/afonsoMatheus/MMD-Wearables
+git clone https://github.com/afonsoMatheus/supervised-concept-drift-analysis
 
 Install dependencies:
 
@@ -48,7 +48,7 @@ pip install -r requirements.txt
 
 ## Reference as:
 
-If you are using this repository contents, please cite as:
+If you are using the contents of this repository, please cite as:
 
 <code>
 To appear
