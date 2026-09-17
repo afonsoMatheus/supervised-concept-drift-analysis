@@ -22,9 +22,6 @@ MECHS_S2 = ["MAR", "MNAR", "MAR", "MNAR"]
 SPLITS_RATIO_S3 = [0.2, 0.2, 0.2, 0.2, 0.2]
 MECHS_S3 = ["MNAR", "MAR", "MNAR", "MAR", "MNAR"]
 
-# SPLITS_RATIO_S4 = [0.5, 0.1, 0.1, 0.1, 0.1, 0.1]
-# MECHS_S4 = ["MAR", "MNAR", "MNAR", "MNAR", "MNAR", "MNAR"]
-
 SEED = 1
 
 def simulate_mm(mech, X_split, mr_f, mnar_t=1):
@@ -112,7 +109,6 @@ def process_file(file_name, scenario, folder_path_o,
             
         try:
             data = pd.read_csv(file_path)
-            # if mr == 1:
             data["target"] = data["heartrate"].astype(float)
         except Exception as e:
             print(f"Error loading file {file_name}: {e}")
@@ -229,8 +225,6 @@ if __name__ == "__main__":
 
         print(f"\nProcessing mechanism {scn}")
         results = []
-
-        # process_file(files[0], scn, folder_path_o, MR_F, NUM_DATASETS)  # Test run for the first file
 
         with ProcessPoolExecutor() as executor:
 

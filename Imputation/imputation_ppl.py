@@ -13,19 +13,19 @@ from spotriver.evaluation.eval_bml import plot_bml_oml_horizon_metrics
 import psutil
 
 
-ALIAS = "PH"
+ALIAS = "FINAL"
 MEC_BATCHES = [["S1","S2","S3"]]
 # MEC_BATCHES = [["S1"],["S2"],["S3"]]
 MRS = ["30"]
-P_NUM = 1
+P_NUM = 30
 M_NUM = 120000000
 N = 1
 
-SPLIT = 10000
+SPLIT = 0
 HORIZON = 1
-GRACE_PERIOD = SPLIT
+GRACE_PERIOD = 0
 OBSERVED_PATIENTS = ['A36HR6Y']
-EXCLUDED_PATIENTS = ['AJ7TSV9','AS2MVDL'] #AUY8KYW muito grande
+EXCLUDED_PATIENTS = ['AJ7TSV9','AS2MVDL']
 FEATURES = ['hour', 'minute'] 
 
 SEED = 1
@@ -150,123 +150,124 @@ MODELS_SCE = {
     }
 }
     
-param_grid = {
-    "Mean": {},
-    'HT': {},
-    # "HAT-KSWIN": {
-        # 'dw': [10000, 20000, 30000],
-        #'a': [0.0001],
-        # 'w': [20000, 30000],
-        # 's': [600, 2000, 1500, 3000]
-    # },
-    # 'HAT-ADWIN': {
-     #    'd': [0.002],
-      #   'c': [32, 100, 300, 500, 600],
-     #    'mw': [10000, 30000]
-    # },
-    'HAT-PH': {
-         'd': [0.9],
-         't': [900],
-         'mi':[12000]
-    }
+# param_grid = {
+#     "Mean": {},
+#     'HT': {},
+#     # "HAT-KSWIN": {
+#         # 'dw': [10000, 20000, 30000],
+#         #'a': [0.0001],
+#         # 'w': [20000, 30000],
+#         # 's': [600, 2000, 1500, 3000]
+#     # },
+#     # 'HAT-ADWIN': {
+#      #    'd': [0.002],
+#       #   'c': [32, 100, 300, 500, 600],
+#      #    'mw': [10000, 30000]
+#     # },
+#     'HAT-PH': {
+#          'd': [0.9],
+#          't': [900],
+#          'mi':[12000]
+#     }
     
-}
+# }
     
-MODEL_FACTORY = {
-    "Mean": {
-        "builder": lambda params: MeanRegressor()
-    },
-    'HT': {
-        "builder": lambda params: (
-            preprocessing.StandardScaler() |
-            tree.HoeffdingTreeRegressor(
-                # grace_period=params.get("gp", 5000),
-                # max_depth=params.get("md", None),
-            )
-        )
-    },
-    "HAT-PH": {
-        "builder": lambda params: (
-            preprocessing.StandardScaler() |
-            tree.HoeffdingAdaptiveTreeRegressor(
-                # grace_period=params.get("gp", 5000),
-                # max_depth=params.get("md", None),
-                # drift_window_threshold=params.get("dw", 30000),
-                drift_detector=drift.PageHinkley(
-                    delta=params.get("d", 0.005),
-                    threshold=params.get("t", 50.0),
-                    min_instances=params.get("mi", 30)
-                ),
-                seed=SEED,
-            )
-        )
-    },
+# MODEL_FACTORY = {
+#     "Mean": {
+#         "builder": lambda params: MeanRegressor()
+#     },
+#     'HT': {
+#         "builder": lambda params: (
+#             preprocessing.StandardScaler() |
+#             tree.HoeffdingTreeRegressor(
+#                 # grace_period=params.get("gp", 5000),
+#                 # max_depth=params.get("md", None),
+#             )
+#         )
+#     },
+#     "HAT-PH": {
+#         "builder": lambda params: (
+#             preprocessing.StandardScaler() |
+#             tree.HoeffdingAdaptiveTreeRegressor(
+#                 # grace_period=params.get("gp", 5000),
+#                 # max_depth=params.get("md", None),
+#                 # drift_window_threshold=params.get("dw", 30000),
+#                 drift_detector=drift.PageHinkley(
+#                     delta=params.get("d", 0.005),
+#                     threshold=params.get("t", 50.0),
+#                     min_instances=params.get("mi", 30)
+#                 ),
+#                 seed=SEED,
+#             )
+#         )
+#     },
 
-    "HAT-KS": {
-        "builder": lambda params: (
-            preprocessing.StandardScaler() |
-            tree.HoeffdingAdaptiveTreeRegressor(
-                # grace_period=params.get("gp", 5000),
-                # max_depth=params.get("md", None),
-                # drift_window_threshold=params.get("dw", 30000),
-                drift_detector=drift.KSWIN(
-                    alpha=params.get("a", 0.001),
-                    window_size=params.get("w", 10000),
-                    stat_size=params.get("s", 10000),
-                ),
-                seed=SEED,
-            )
-        )
-    },
+#     "HAT-KS": {
+#         "builder": lambda params: (
+#             preprocessing.StandardScaler() |
+#             tree.HoeffdingAdaptiveTreeRegressor(
+#                 # grace_period=params.get("gp", 5000),
+#                 # max_depth=params.get("md", None),
+#                 # drift_window_threshold=params.get("dw", 30000),
+#                 drift_detector=drift.KSWIN(
+#                     alpha=params.get("a", 0.001),
+#                     window_size=params.get("w", 10000),
+#                     stat_size=params.get("s", 10000),
+#                 ),
+#                 seed=SEED,
+#             )
+#         )
+#     },
 
-    "HAT-ADWIN": {
-        "builder": lambda params: (
-            preprocessing.StandardScaler() |
-            tree.HoeffdingAdaptiveTreeRegressor(
-                # drift_window_threshold=params.get("dw", 30000),
-                drift_detector=drift.ADWIN(
-                    delta=params.get("a", 0.005),
-                    min_window_length=params.get("mw", 1000),
-                    clock= params.get("c", 32)
-                ),
-                seed=SEED,
-            )
-        )
-    }
-}
+#     "HAT-ADWIN": {
+#         "builder": lambda params: (
+#             preprocessing.StandardScaler() |
+#             tree.HoeffdingAdaptiveTreeRegressor(
+#                 # drift_window_threshold=params.get("dw", 30000),
+#                 drift_detector=drift.ADWIN(
+#                     delta=params.get("a", 0.005),
+#                     min_window_length=params.get("mw", 1000),
+#                     clock= params.get("c", 32)
+#                 ),
+#                 seed=SEED,
+#             )
+#         )
+#     }
+# }
 
 
-def build_models(param_grid, factory):
-    MODELS = {}
+# def build_models(param_grid, factory):
+#     MODELS = {}
 
-    for family, grid in param_grid.items():
+#     for family, grid in param_grid.items():
 
-        if not grid:
-            MODELS[family] = factory[family]["builder"]({})
-            continue
+#         if not grid:
+#             MODELS[family] = factory[family]["builder"]({})
+#             continue
 
-        keys = list(grid.keys())
-        values = list(grid.values())
+#         keys = list(grid.keys())
+#         values = list(grid.values())
 
-        for combo in product(*values):
-            params = dict(zip(keys, combo))
+#         for combo in product(*values):
+#             params = dict(zip(keys, combo))
 
-            base_model = factory[family]["builder"](params)
+#             base_model = factory[family]["builder"](params)
 
-            name = family + "_" + "-".join(
-                f"{k}_{str(v).replace('.', '')}" if k != 'arq' 
-                else f"{k}_{str(v[0]).replace('.', '')}"
-                for k, v in params.items()
-            )
+#             name = family + "_" + "-".join(
+#                 f"{k}_{str(v).replace('.', '')}" if k != 'arq' 
+#                 else f"{k}_{str(v[0]).replace('.', '')}"
+#                 for k, v in params.items()
+#             )
 
-            MODELS[name] = base_model
+#             MODELS[name] = base_model
 
-    return MODELS
+#     return MODELS
 
-MODELS = build_models(param_grid, MODEL_FACTORY)
+# MODELS = build_models(param_grid, MODEL_FACTORY)
 
 def process_single_mr(mech, mr, i, pat, folder_path_m, folder_path_imputed):
-    # MODELS = MODELS_SCE[mech]
+    
+    MODELS = MODELS_SCE[mech]
 
     local_result = {mr: {f"{imp}": 0 for imp in MODELS.keys()}}
     local_result[mr].update({f"t_{imp}": 0 for imp in MODELS.keys()})
@@ -333,14 +334,6 @@ def process_single_mr(mech, mr, i, pat, folder_path_m, folder_path_imputed):
 
                 df_imputed.loc[df_true_oml["Prediction"].index, 'heartrate'] = df_true_oml["Prediction"].values
 
-                # df_imputed.to_csv(
-                #      os.path.join(
-                #          path_imp,
-                #          f"{pat.rstrip('/').split('/')[-1]}_hr_{mech}_{i}_{mr}_{imp_name}.csv"
-                #      ),
-                #      index=False
-                # )
-
     except Exception as e:
         print(f"\n❌ Erro ao processar {pat.rstrip('/').split('/')[-1]} | Mechanism: {mech} | MR: {mr} | Dataset: {i} | Error: {e}")
 
@@ -394,17 +387,6 @@ def process_mechanism(mech, num_datasets, mrs):
                     try:
                         result = future.result()
 
-                        if patient_id == 'A0NVTRV':
-                            if result[1]:
-                                df_labels = list(result[1].keys())
-                                df_labels = [new_labels.get(imp, imp) for imp in df_labels if imp in MODELS.keys()]
-                                evals_list = [evals for evals in result[1].values()]
-                                for ev in evals_list:
-                                    ev.dropna(inplace=True)
-                                    ev.reset_index(drop=True, inplace=True)
-
-                                plot_bml_oml_horizon_metrics(evals_list, df_labels, metric=root_mean_squared_error, filename=f"Plots/oml_{patient_id}_{mech}_{ALIAS}.png")
-
                         if mr not in patient_results[mech][patient_id]:
                             patient_results[mech][patient_id][mr] = {}
 
@@ -422,7 +404,7 @@ def process_mechanism(mech, num_datasets, mrs):
                         print(f"❌ Falha no MR {mr}: {e}")
 
     for mr in local_results[mech]:
-        for imp in MODELS.keys():
+        for imp in MODELS_SCE[mech].keys():
             local_results[mech][mr][imp] /= len(patients) * num_datasets
             local_results[mech][mr][f"med_{imp}"] /= len(patients) * num_datasets
             local_results[mech][mr][f"t_{imp}"] /= len(patients) * num_datasets
@@ -441,9 +423,9 @@ if __name__ == "__main__":
 
     print(f"🚀 Iniciando processamento para mecanismos: {MEC_BATCHES} | Missing Rates: {MRS} | Datasets por paciente: {N} | Pacientes: {P_NUM}")
     print(f"Modelos a serem avaliados:")
-    print(f"  {ALIAS}: {list(MODELS.keys())}")
-    # for mech in MODELS_SCE.keys():
-    #     print(f"  {mech}: {list(MODELS_SCE[mech].keys())}")
+    # print(f"  {ALIAS}: {list(MODELS.keys())}")
+    for mech in MODELS_SCE.keys():
+        print(f"  {mech}: {list(MODELS_SCE[mech].keys())}")
 
     total_time_start = time.time()
 
@@ -479,7 +461,7 @@ if __name__ == "__main__":
             records = []
             for mech in combined_results:
                 for mr in combined_results[mech]:
-                    for imp in MODELS.keys():
+                    for imp in MODELS_SCE[mech].keys():
                         records.append({
                             'mechanism': mech,
                             'missing_rate': mr,
@@ -509,7 +491,7 @@ if __name__ == "__main__":
             for mech in combined_pat_results:
                 for pat in combined_pat_results[mech]:
                     for mr in combined_pat_results[mech][pat]:
-                        for imp in MODELS.keys():
+                        for imp in MODELS_SCE[mech].keys():
                             if imp in combined_pat_results[mech][pat][mr]:
                                 pat_records.append({
                                     'mechanism': mech,
